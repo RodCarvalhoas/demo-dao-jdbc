@@ -4,7 +4,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import db.DB;
 import db.DbException;
@@ -40,21 +43,21 @@ public class SellerDaoJDBC implements SellerDao {
 
 	@Override
 	public Seller findById(Integer id) {
-		PreparedStatement st = null;
-		ResultSet rs = null;
+		PreparedStatement st = null; //Objeto do comando SQL com ?
+		ResultSet rs = null; //Objeto que captura em forma de tabela
 		try {
-			st = conn.prepareStatement(
+			st = conn.prepareStatement( //Comando SQL
 					"SELECT seller.*,department.Name as DepName " + "FROM seller INNER JOIN department "
 							+ "ON seller.DepartmentId = department.Id " + "WHERE seller.Id = ?");
 
-			st.setInt(1, id);
-			rs = st.executeQuery();
-			if (rs.next()) {
-				Department dep = instantiateDepartment(rs);
-				Seller obj = instantiateSeller(rs, dep);
-				return obj;
+			st.setInt(1, id); //Setando o department que foi deixado em aberto com ?
+			rs = st.executeQuery(); //Executando o comando SQL
+			if (rs.next()) { //Se o resultSet existir 1 linha >
+				Department dep = instantiateDepartment(rs); //O department será instanciado a partir do método que captura o DepartmentId e Name do Departamento a partir do filtro feito pelo comando SQL.
+				Seller obj = instantiateSeller(rs, dep); //O Seller será instanciado a partir do método
+				return obj; //retorna o Seller a partir da instanciação
 			}
-			return null;
+			return null; //Se não existir vendedor, retorna nulo
 		} catch (SQLException e) {
 			throw new DbException(e.getMessage());
 		} finally {
@@ -84,8 +87,81 @@ public class SellerDaoJDBC implements SellerDao {
 
 	@Override
 	public List<Seller> findAll() {
-		// TODO Auto-generated method stub
-		return null;
+		PreparedStatement st = null; //Instanciando a variável PreparedStatement
+		ResultSet rs = null; //Instanciando o ResultSet
+		try {
+			st = conn.prepareStatement( //Comando SQL com a váriavel PreparedStatemnt
+					"SELECT seller.*,department.Name as DepName "
+					+ "FROM seller INNER JOIN department "
+					+ "ON seller.DepartmentId = department.Id "
+					+ "ORDER BY Name");
+			
+			rs = st.executeQuery(); //Executando o Comando SQL
+			
+			List<Seller> list = new ArrayList<>(); //Instanciando um List de Seller
+			Map<Integer, Department> map  = new HashMap<Integer, Department>(); //Instanciando um Map 
+			
+			
+			while(rs.next()) { //Enquanto tiver próximo no resultSet
+				
+				Department dep = map.get(rs.getInt("DepartmentId")); //Instanciando um Department com a função map com a coluna DepartmentId
+				
+				if(dep == null) { //Se não existir DepartmentId*Função de cima* faça:
+					dep = instantiateDepartment(rs);//Instanciando o Department
+					map.put(rs.getInt("DepartmentId"), dep);//Inserindo o Department no conjunto Map
+				}
+				
+				Seller obj = instantiateSeller(rs, dep);//Instanciando o Seller*Department*
+				list.add(obj);//Adicionando o Seller na lista
+				
+			}
+			return list;//Retorna List
+		} catch (SQLException e) {
+			throw new DbException(e.getMessage());
+		} finally {
+			DB.closeResultSet(rs);
+			DB.closeStatement(st);
+		}
+	}
+
+	@Override
+	public List<Seller> findByDeparment(Department department) {//Método para procurar por Department
+		PreparedStatement st = null; //Instanciando a variável PreparedStatement
+		ResultSet rs = null; //Instanciando o ResultSet
+		try {
+			st = conn.prepareStatement( //Comando SQL com a váriavel PreparedStatemnt
+					"SELECT seller.*,department.Name as DepName "
+					+ "FROM seller INNER JOIN department "
+					+ "ON seller.DepartmentId = department.Id "
+					+ "WHERE DepartmentId = ? "
+					+ "ORDER BY Name");
+			st.setInt(1, department.getId()); //Capturando o DepartmentId
+			rs = st.executeQuery(); //Executando o Comando SQL
+			
+			List<Seller> list = new ArrayList<>(); //Instanciando um List de Seller
+			Map<Integer, Department> map  = new HashMap<Integer, Department>(); //Instanciando um Map 
+			
+			
+			while(rs.next()) { //Enquanto tiver próximo no resultSet
+				
+				Department dep = map.get(rs.getInt("DepartmentId")); //Instanciando um Department com a função map com a coluna DepartmentId
+				
+				if(dep == null) { //Se não existir DepartmentId*Função de cima* faça:
+					dep = instantiateDepartment(rs);//Instanciando o Department
+					map.put(rs.getInt("DepartmentId"), dep);//Inserindo o Department no conjunto Map
+				}
+				
+				Seller obj = instantiateSeller(rs, dep);//Instanciando o Seller*Department*
+				list.add(obj);//Adicionando o Seller na lista
+				
+			}
+			return list;//Retorna List
+		} catch (SQLException e) {
+			throw new DbException(e.getMessage());
+		} finally {
+			DB.closeResultSet(rs);
+			DB.closeStatement(st);
+		}
 	}
 
 }
